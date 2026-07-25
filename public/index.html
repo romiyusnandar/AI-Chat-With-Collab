@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AIChat Pro</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Token login (only shown if the server requires it) -->
+  <div id="login" class="overlay hidden">
+    <div class="card">
+      <h2>Access token</h2>
+      <p class="muted">This app is protected. Enter the access token.</p>
+      <input id="token-input" type="password" placeholder="Token" />
+      <button id="token-btn">Enter</button>
+      <p id="token-error" class="error hidden">Wrong token.</p>
+    </div>
+  </div>
+
+  <div id="app" class="layout hidden">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <strong>Characters</strong>
+        <button id="new-char-btn" title="New character">+</button>
+      </div>
+      <div id="char-list" class="list"></div>
+
+      <div class="sidebar-head">
+        <strong>Chats</strong>
+        <button id="new-chat-btn" title="New chat" disabled>+</button>
+      </div>
+      <div id="chat-list" class="list"></div>
+
+      <div class="sidebar-foot">
+        <button id="test-btn" class="ghost">Test LLM connection</button>
+        <span id="test-status" class="muted small"></span>
+      </div>
+    </aside>
+
+    <!-- Chat area -->
+    <main class="chat">
+      <div id="chat-header" class="chat-header">
+        <span id="chat-title" class="muted">Pick a character to begin</span>
+        <span class="header-actions hidden" id="header-actions">
+          <button id="summarize-btn" class="ghost" title="Summarize this chat into memory">Remember this chat</button>
+          <button id="memory-btn" class="ghost" title="View memory">🧠 Memory</button>
+        </span>
+      </div>
+      <div id="messages" class="messages"></div>
+      <div class="composer">
+        <textarea id="input" placeholder="Type a message… (Enter to send, Shift+Enter for newline)" disabled></textarea>
+        <button id="send-btn" disabled>Send</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- Character editor modal -->
+  <div id="char-modal" class="overlay hidden">
+    <div class="card wide">
+      <h2 id="char-modal-title">New character</h2>
+      <label>Name<input id="f-name" /></label>
+      <div class="row">
+        <label>Gender<input id="f-gender" /></label>
+        <label>Age<input id="f-age" /></label>
+      </div>
+      <label>Personality / description<textarea id="f-persona" rows="3"></textarea></label>
+      <label>Scenario<textarea id="f-scenario" rows="2"></textarea></label>
+      <label>First message<textarea id="f-first" rows="2"></textarea></label>
+      <label>Extra system instructions<textarea id="f-sys" rows="2"></textarea></label>
+      <div class="row end">
+        <button id="char-cancel" class="ghost">Cancel</button>
+        <button id="char-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="memory-modal" class="overlay hidden">
+    <div class="card wide">
+      <h2 id="memory-title">Memory</h2>
+      <p class="muted small">What this character remembers across all chats.</p>
+      <h3>Facts</h3>
+      <div id="memory-facts" class="mem-list"></div>
+      <div class="row">
+        <input id="new-fact" placeholder="Add a fact to remember…" />
+        <button id="add-fact-btn">Add</button>
+      </div>
+      <h3>Summaries</h3>
+      <div id="memory-summaries" class="mem-list muted small"></div>
+      <div class="row end">
+        <button id="memory-close" class="ghost">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

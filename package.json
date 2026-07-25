@@ -1,0 +1,17 @@
+{
+  "name": "aichat-pro",
+  "version": "1.0.0",
+  "description": "Local character AI chat with SQLite storage, SSE streaming, and auth. Connects to any OpenAI-compatible LLM endpoint (e.g. Ollama+LiteLLM on Google Colab).",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "seed": "node seed.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.0.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "uuid": "^11.0.0"
+  }
+}
