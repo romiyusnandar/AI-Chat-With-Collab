@@ -2,6 +2,7 @@
 let TOKEN = localStorage.getItem('token') || '';
 let currentCharacter = null;
 let currentChat = null;
+let characters = [];
 
 // ── API helper (attaches auth token) ─────────────────────────────────────────
 async function api(path, opts = {}) {
@@ -16,7 +17,6 @@ async function api(path, opts = {}) {
 async function init() {
   const { required } = await (await fetch('/api/auth-required')).json();
   if (required && !TOKEN) return showLogin();
-  // Verify token works by loading characters.
   try {
     await loadCharacters();
     document.getElementById('app').classList.remove('hidden');
@@ -39,64 +39,137 @@ document.getElementById('token-btn').onclick = async () => {
   } catch { showLogin(true); }
 };
 
-// ── Characters ────────────────────────────────────────────────────────────────
+// ── Screen router ─────────────────────────────────────────────────────────────
+function showScreen(name) {
+  ['characters', 'chats', 'chat'].forEach(n => {
+    document.getElementById(`screen-${n}`).classList.toggle('hidden', n !== name);
+  });
+}
+
+// ── Characters (screen 1) ────────────────────────────────────────────────────
 async function loadCharacters() {
-  const chars = await (await api('/api/characters')).json();
-  const el = document.getElementById('char-list');
+  characters = await (await api('/api/characters')).json();
+  const el = document.getElementById('char-grid');
   el.innerHTML = '';
-  chars.forEach(c => {
+  if (!characters.length) {
+    el.innerHTML = `
+      <div class="empty-state big">
+        <div class="empty-icon">🎭</div>
+        <div class="empty-title">Belum ada karakter</div>
+        <div class="empty-sub">Buat karakter dulu sebelum bisa mulai chat.</div>
+        <button id="empty-new-char-btn" class="primary-btn">+ Buat karakter</button>
+      </div>`;
+    document.getElementById('empty-new-char-btn').onclick = () => openCharModal();
+    return;
+  }
+  characters.forEach(c => {
     const div = document.createElement('div');
-    div.className = 'item' + (currentCharacter?.id === c.id ? ' active' : '');
-    div.innerHTML = `<div>${escapeHtml(c.name)}</div><div class="sub">${escapeHtml(c.persona || '').slice(0, 48)}</div>`;
+    div.className = 'char-card';
+    div.innerHTML = `
+      <button class="char-card-delete" title="Delete character">🗑</button>
+      ${avatarHtml(c, 'char-card-avatar')}
+      <div class="char-card-name">${escapeHtml(c.name)}</div>
+      <div class="char-card-sub">${escapeHtml(c.persona || 'No description').slice(0, 70)}</div>
+    `;
+    div.querySelector('.char-card-delete').onclick = (e) => { e.stopPropagation(); deleteCharacter(c); };
     div.onclick = () => selectCharacter(c);
     el.appendChild(div);
   });
 }
 
+async function deleteCharacter(c) {
+  if (!confirm(`Delete character “${c.name}”? All of their chats and memory will be lost too.`)) return;
+  await api(`/api/characters/${c.id}`, { method: 'DELETE' });
+  if (currentCharacter?.id === c.id) {
+    currentCharacter = null;
+    currentChat = null;
+    showScreen('characters');
+  }
+  loadCharacters();
+}
+
 async function selectCharacter(c) {
-  currentCharacter = c; currentChat = null;
-  document.getElementById('new-chat-btn').disabled = false;
-  document.getElementById('chat-title').textContent = c.name;
-  document.getElementById('header-actions').classList.remove('hidden');
-  document.getElementById('messages').innerHTML = '';
-  setComposerEnabled(false);
-  await loadCharacters();
+  currentCharacter = c;
+  currentChat = null;
+  renderCharInfo('chats-char-info', c);
+  showScreen('chats');
   await loadChats();
 }
 
+document.getElementById('back-to-chars-btn').onclick = () => {
+  currentCharacter = null;
+  currentChat = null;
+  showScreen('characters');
+  loadCharacters();
+};
+
+// ── Chats list (screen 2) ────────────────────────────────────────────────────
 async function loadChats() {
   const chats = await (await api(`/api/characters/${currentCharacter.id}/chats`)).json();
   const el = document.getElementById('chat-list');
   el.innerHTML = '';
+  if (!chats.length) {
+    el.innerHTML = '<div class="empty-state">No chats yet. Click “+ New chat” to start one.</div>';
+    return;
+  }
   chats.forEach(ch => {
     const div = document.createElement('div');
-    div.className = 'item' + (currentChat?.id === ch.id ? ' active' : '');
-    div.innerHTML = `<div>${escapeHtml(ch.title || 'New chat')}</div><div class="sub">${ch.message_count} messages</div>`;
-    div.onclick = () => openChat(ch);
+    div.className = 'item chat-row';
+    div.innerHTML = `
+      <div class="item-text">
+        <div>${escapeHtml(ch.title || 'New chat')}</div>
+        <div class="sub">${ch.message_count} messages · ${formatDate(ch.updated_at)}</div>
+      </div>
+      <button class="icon-only ghost danger chat-delete-btn" title="Delete this chat">🗑</button>
+    `;
+    div.querySelector('.item-text').onclick = () => openChat(ch);
+    div.querySelector('.chat-delete-btn').onclick = (e) => { e.stopPropagation(); deleteChat(ch); };
     el.appendChild(div);
   });
 }
 
-// ── New chat / open chat ─────────────────────────────────────────────────────
 document.getElementById('new-chat-btn').onclick = async () => {
   if (!currentCharacter) return;
   const chat = await (await api('/api/chats', {
     method: 'POST', body: JSON.stringify({ characterId: currentCharacter.id }),
   })).json();
-  await loadChats();
   openChat(chat);
+};
+
+async function deleteChat(chat) {
+  if (!confirm(`Delete “${chat.title || 'this chat'}”? This can’t be undone.`)) return;
+  await api(`/api/chats/${chat.id}`, { method: 'DELETE' });
+  if (currentChat?.id === chat.id) {
+    currentChat = null;
+    showScreen('chats');
+  }
+  loadChats();
+}
+
+// ── Conversation (screen 3) ──────────────────────────────────────────────────
+document.getElementById('back-to-chats-btn').onclick = () => {
+  currentChat = null;
+  showScreen('chats');
+  loadChats();
 };
 
 async function openChat(chat) {
   currentChat = chat;
-  await loadChats();
+  renderCharInfo('chat-char-info', currentCharacter);
+  showScreen('chat');
   const msgs = await (await api(`/api/chats/${chat.id}/messages`)).json();
   const box = document.getElementById('messages');
   box.innerHTML = '';
-  msgs.forEach(m => addBubble(m.role, m.content));
+  msgs.forEach(m => addBubble(m.role, m.content, m.created_at));
   setComposerEnabled(true);
   scrollDown();
+  document.getElementById('input').focus();
 }
+
+document.getElementById('delete-chat-btn').onclick = () => {
+  if (!currentChat) return;
+  deleteChat(currentChat);
+};
 
 function setComposerEnabled(on) {
   document.getElementById('input').disabled = !on;
@@ -111,9 +184,9 @@ async function sendMessage() {
   input.value = '';
   setComposerEnabled(false);
 
-  addBubble('user', text);
-  const bubble = addBubble('assistant', '');   // empty bubble we fill as tokens arrive
-  bubble.classList.add('typing');
+  addBubble('user', text, new Date().toISOString());
+  const bubble = addBubble('assistant', '', new Date().toISOString());   // empty bubble we fill as tokens arrive
+  bubble.querySelector('.msg').classList.add('typing');
 
   try {
     const res = await api(`/api/chats/${currentChat.id}/send`, {
@@ -149,24 +222,63 @@ async function sendMessage() {
   } catch (err) {
     bubble.querySelector('.content').textContent = `⚠️ ${err.message}`;
   } finally {
-    bubble.classList.remove('typing');
+    bubble.querySelector('.msg').classList.remove('typing');
     setComposerEnabled(true);
     input.focus();
-    loadChats();
   }
 }
 
 // ── UI helpers ────────────────────────────────────────────────────────────────
-function addBubble(role, content) {
+function addBubble(role, content, timestamp) {
   const box = document.getElementById('messages');
-  const div = document.createElement('div');
-  div.className = `msg ${role}`;
-  div.innerHTML = `<div class="who">${role === 'user' ? 'You' : escapeHtml(currentCharacter?.name || 'AI')}</div><div class="content"></div>`;
-  div.querySelector('.content').textContent = content;
-  box.appendChild(div);
+  const row = document.createElement('div');
+  row.className = `msg-row ${role}`;
+  const av = role === 'user'
+    ? '<span class="avatar-fallback msg-avatar user-avatar">U</span>'
+    : avatarHtml(currentCharacter, 'avatar msg-avatar');
+  const name = role === 'user' ? 'You' : (currentCharacter?.name || 'AI');
+  const time = timestamp ? `<span class="msg-time">${formatTime(timestamp)}</span>` : '';
+  row.innerHTML = `
+    ${av}
+    <div class="msg-bubble-wrap">
+      <div class="msg-meta"><span class="who">${escapeHtml(name)}</span>${time}</div>
+      <div class="msg ${role}"><div class="content"></div></div>
+    </div>`;
+  row.querySelector('.content').textContent = content;
+  box.appendChild(row);
   scrollDown();
-  return div;
+  return row;
 }
+
+function renderCharInfo(elId, c) {
+  document.getElementById(elId).innerHTML = c
+    ? `${avatarHtml(c)}<span class="char-info-name">${escapeHtml(c.name)}</span>`
+    : '';
+}
+
+// Renders a round avatar image, or a colored circle with the first letter if none.
+function avatarHtml(char, cls = 'avatar') {
+  if (char && char.avatar) return `<img class="${cls}" src="${char.avatar}" alt="" />`;
+  const letter = escapeHtml((char?.name || '?').charAt(0).toUpperCase());
+  return `<span class="avatar-fallback ${cls === 'avatar' ? '' : cls}">${letter}</span>`;
+}
+
+function formatTime(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  return sameDay
+    ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleDateString([], { day: '2-digit', month: 'short' });
+}
+
 function scrollDown() { const b = document.getElementById('messages'); b.scrollTop = b.scrollHeight; }
 function escapeHtml(s) { return (s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
@@ -176,23 +288,62 @@ document.getElementById('input').addEventListener('keydown', e => {
 });
 
 // ── Character editor ─────────────────────────────────────────────────────────
+let charAvatarData = '';   // resized base64 data URL of the chosen avatar
+
 document.getElementById('new-char-btn').onclick = () => openCharModal();
 document.getElementById('char-cancel').onclick = () => document.getElementById('char-modal').classList.add('hidden');
+
+document.getElementById('f-avatar').onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  charAvatarData = await fileToResizedDataURL(file);
+  document.getElementById('f-avatar-preview').src = charAvatarData;
+};
+
 document.getElementById('char-save').onclick = async () => {
   const body = {
     name: val('f-name'), gender: val('f-gender'), age: val('f-age'),
     persona: val('f-persona'), scenario: val('f-scenario'),
     first_message: val('f-first'), system_prompt: val('f-sys'),
+    avatar: charAvatarData,
   };
   if (!body.name) return alert('Name is required');
   await api('/api/characters', { method: 'POST', body: JSON.stringify(body) });
   document.getElementById('char-modal').classList.add('hidden');
   loadCharacters();
 };
+
 function openCharModal() {
   ['f-name', 'f-gender', 'f-age', 'f-persona', 'f-scenario', 'f-first', 'f-sys'].forEach(id => document.getElementById(id).value = '');
+  charAvatarData = '';
+  document.getElementById('f-avatar').value = '';
+  document.getElementById('f-avatar-preview').removeAttribute('src');
   document.getElementById('char-modal').classList.remove('hidden');
 }
+
+// Read an image file and shrink it to a small JPEG data URL (keeps the DB light).
+function fileToResizedDataURL(file, maxSize = 256, quality = 0.85) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > height && width > maxSize) { height = Math.round(height * maxSize / width); width = maxSize; }
+        else if (height >= width && height > maxSize) { width = Math.round(width * maxSize / height); height = maxSize; }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 function val(id) { return document.getElementById(id).value.trim(); }
 
 // ── Test connection ───────────────────────────────────────────────────────────
@@ -263,7 +414,7 @@ document.getElementById('summarize-btn').onclick = async () => {
   if (!currentChat) return alert('Open a chat first.');
   const btn = document.getElementById('summarize-btn');
   const label = btn.textContent;
-  btn.disabled = true; btn.textContent = 'Summarizing…';
+  btn.disabled = true; btn.textContent = '…';
   try {
     const r = await (await api(`/api/chats/${currentChat.id}/summarize`, { method: 'POST' })).json();
     if (r.ok) {

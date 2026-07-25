@@ -18,48 +18,61 @@
     </div>
   </div>
 
-  <div id="app" class="layout hidden">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="sidebar-head">
-        <strong>Characters</strong>
-        <button id="new-char-btn" title="New character">+</button>
-      </div>
-      <div id="char-list" class="list"></div>
+  <div id="app" class="app hidden">
+    <!-- Screen 1: pick a character -->
+    <section id="screen-characters" class="screen">
+      <header class="screen-header">
+        <h1>Characters</h1>
+        <div class="header-actions">
+          <button id="test-btn" class="ghost small-btn" title="Test LLM connection">Test connection</button>
+          <button id="new-char-btn" class="primary-btn" title="New character">+ New</button>
+        </div>
+      </header>
+      <div id="test-status" class="muted small test-status"></div>
+      <div id="char-grid" class="char-grid"></div>
+    </section>
 
-      <div class="sidebar-head">
-        <strong>Chats</strong>
-        <button id="new-chat-btn" title="New chat" disabled>+</button>
-      </div>
-      <div id="chat-list" class="list"></div>
+    <!-- Screen 2: chats belonging to the selected character -->
+    <section id="screen-chats" class="screen hidden">
+      <header class="screen-header">
+        <button id="back-to-chars-btn" class="icon-btn" title="Switch character">←</button>
+        <div id="chats-char-info" class="char-info"></div>
+        <button id="new-chat-btn" class="primary-btn">+ New chat</button>
+      </header>
+      <div id="chat-list" class="chat-list"></div>
+    </section>
 
-      <div class="sidebar-foot">
-        <button id="test-btn" class="ghost">Test LLM connection</button>
-        <span id="test-status" class="muted small"></span>
-      </div>
-    </aside>
-
-    <!-- Chat area -->
-    <main class="chat">
-      <div id="chat-header" class="chat-header">
-        <span id="chat-title" class="muted">Pick a character to begin</span>
-        <span class="header-actions hidden" id="header-actions">
-          <button id="summarize-btn" class="ghost" title="Summarize this chat into memory">Remember this chat</button>
-          <button id="memory-btn" class="ghost" title="View memory">🧠 Memory</button>
-        </span>
-      </div>
+    <!-- Screen 3: the conversation -->
+    <section id="screen-chat" class="screen hidden">
+      <header id="chat-header" class="screen-header">
+        <button id="back-to-chats-btn" class="icon-btn" title="Back to chats">←</button>
+        <div id="chat-char-info" class="char-info"></div>
+        <div class="header-actions">
+          <button id="summarize-btn" class="ghost icon-only" title="Summarize this chat into memory">🧾</button>
+          <button id="memory-btn" class="ghost icon-only" title="View memory">🧠</button>
+          <button id="delete-chat-btn" class="ghost icon-only danger" title="Delete this chat">🗑</button>
+        </div>
+      </header>
       <div id="messages" class="messages"></div>
       <div class="composer">
-        <textarea id="input" placeholder="Type a message… (Enter to send, Shift+Enter for newline)" disabled></textarea>
-        <button id="send-btn" disabled>Send</button>
+        <div class="composer-inner">
+          <textarea id="input" placeholder="Type a message… (Enter to send, Shift+Enter for newline)"></textarea>
+          <button id="send-btn" title="Send"></button>
+        </div>
       </div>
-    </main>
+    </section>
   </div>
 
   <!-- Character editor modal -->
   <div id="char-modal" class="overlay hidden">
     <div class="card wide">
       <h2 id="char-modal-title">New character</h2>
+      <div class="avatar-row">
+        <img id="f-avatar-preview" class="avatar-preview" alt="" />
+        <label class="avatar-label">Avatar (optional)
+          <input id="f-avatar" type="file" accept="image/*" />
+        </label>
+      </div>
       <label>Name<input id="f-name" /></label>
       <div class="row">
         <label>Gender<input id="f-gender" /></label>
