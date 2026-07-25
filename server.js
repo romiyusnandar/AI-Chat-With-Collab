@@ -1,6 +1,7 @@
 // server.js — Express API + static frontend
 require('dotenv').config();
 const path = require('path');
+const os = require('os');
 const express = require('express');
 const { v4: uuid } = require('uuid');
 const { Characters, Chats, Messages, Memory } = require('./db');
@@ -168,9 +169,22 @@ app.get('/api/test-connection', async (req, res) => {
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
+function lanIps() {
+  const nets = os.networkInterfaces();
+  const ips = [];
+  for (const ifaceList of Object.values(nets)) {
+    for (const iface of ifaceList || []) {
+      if (iface.family === 'IPv4' && !iface.internal) ips.push(iface.address);
+    }
+  }
+  return ips;
+}
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n  AIChat Pro running:`);
   console.log(`   Local:   http://localhost:${PORT}`);
-  console.log(`   Network: http://<your-LAN-IP>:${PORT}`);
+  const ips = lanIps();
+  if (ips.length) ips.forEach(ip => console.log(`   Network: http://${ip}:${PORT}`));
+  else console.log(`   Network: (no LAN IP found)`);
   console.log(`   Auth:    ${APP_TOKEN ? 'ON (token required)' : 'OFF (open — set APP_TOKEN in .env to enable)'}\n`);
 });
