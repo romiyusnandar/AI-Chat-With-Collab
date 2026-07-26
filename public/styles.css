@@ -148,34 +148,21 @@ button.danger:hover { background: rgba(255,122,122,.12); }
 
 /* Inline code + fenced code blocks inside a message bubble */
 .msg .inline-code {
-  background: rgba(0,0,0,.28); border: 1px solid rgba(255,255,255,.08);
-  border-radius: 4px; padding: 1px 6px; font-family: 'Cascadia Code', Consolas, 'Courier New', monospace;
-  font-size: 13px;
+  background: rgba(0,0,0,.25); border-radius: 4px; padding: 1px 6px;
+  font-family: Consolas, monospace; font-size: 13px;
 }
-.msg.user .inline-code { background: rgba(0,0,0,.2); }
-.code-block {
-  margin: 8px 0; border-radius: 10px; overflow: hidden;
-  background: #0b0d12; border: 1px solid var(--line);
-}
-.code-block-head {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 6px 10px; background: rgba(255,255,255,.04); border-bottom: 1px solid var(--line);
-}
-.code-lang { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.code-block { margin: 8px 0; border-radius: 10px; background: #0b0d12; }
+.code-block-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; }
+.code-lang { font-size: 11px; color: var(--muted); text-transform: uppercase; }
 .copy-code-btn {
   background: transparent; border: 1px solid var(--line); color: var(--text);
-  font-size: 11px; font-weight: 600; height: 24px; padding: 0 10px; border-radius: 6px; cursor: pointer;
+  font-size: 11px; height: 24px; padding: 0 10px; border-radius: 6px; cursor: pointer;
 }
-.copy-code-btn:hover { background: var(--accent-2); }
 .copy-code-btn.copied { color: #4ade80; border-color: #4ade80; }
-.code-block pre {
-  margin: 0; padding: 10px 14px; overflow-x: auto;
-  scrollbar-width: none; -ms-overflow-style: none;
-}
-.code-block pre::-webkit-scrollbar { display: none; }
+.code-block pre { margin: 0; padding: 10px 14px; }
 .code-block code {
-  font-family: 'Cascadia Code', Consolas, 'Courier New', monospace;
-  font-size: 13px; line-height: 1.5; white-space: pre; color: #d8e0f0;
+  font-family: Consolas, monospace; font-size: 13px; line-height: 1.5;
+  white-space: pre-wrap; word-break: break-word; color: #d8e0f0;
 }
 
 .composer {

@@ -34,7 +34,7 @@ function buildSystemPrompt(char, memory = null) {
   return parts.join('\n');
 }
 
-function buildMessages(char, history, memory = null, tokenBudget = 6000) {
+function buildMessages(char, history, memory = null, tokenBudget = Number(process.env.CONTEXT_TOKENS ?? 6000)) {
   const system = buildSystemPrompt(char, memory);
   let budget = tokenBudget - estimateTokens(system);
   const kept = [];
