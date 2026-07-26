@@ -1,4 +1,4 @@
-# AIChat Pro
+# AIChat With Colab
 
 Aplikasi chat karakter AI yang berjalan lokal di komputer kamu, tapi
 "otaknya" (LLM) bisa datang dari mana saja yang kompatibel dengan API

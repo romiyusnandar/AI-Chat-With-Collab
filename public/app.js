@@ -212,15 +212,15 @@ async function sendMessage() {
         const data = JSON.parse(dataMatch[1]);
         if (event === 'token') {
           acc += data.t;
-          bubble.querySelector('.content').textContent = acc;
+          bubble.querySelector('.content').innerHTML = renderMarkdown(acc);
           scrollDown();
         } else if (event === 'error') {
-          bubble.querySelector('.content').textContent = acc || `⚠️ ${data.error}`;
+          bubble.querySelector('.content').innerHTML = renderMarkdown(acc || `⚠️ ${data.error}`);
         }
       }
     }
   } catch (err) {
-    bubble.querySelector('.content').textContent = `⚠️ ${err.message}`;
+    bubble.querySelector('.content').innerHTML = renderMarkdown(`⚠️ ${err.message}`);
   } finally {
     bubble.querySelector('.msg').classList.remove('typing');
     setComposerEnabled(true);
@@ -244,11 +244,56 @@ function addBubble(role, content, timestamp) {
       <div class="msg-meta"><span class="who">${escapeHtml(name)}</span>${time}</div>
       <div class="msg ${role}"><div class="content"></div></div>
     </div>`;
-  row.querySelector('.content').textContent = content;
+  row.querySelector('.content').innerHTML = renderMarkdown(content);
   box.appendChild(row);
   scrollDown();
   return row;
 }
+
+// ── Lightweight markdown rendering (bold/italic/inline code/code blocks) ────
+// Not a full CommonMark parser — just enough for typical AI chat replies.
+function renderMarkdown(raw) {
+  const text = raw || '';
+  const codeBlockRegex = /```(\w*)\n?([\s\S]*?)(?:```|$)/g;
+  let lastIndex = 0, html = '', match;
+  while ((match = codeBlockRegex.exec(text))) {
+    const [full, lang, code] = match;
+    html += renderInline(text.slice(lastIndex, match.index));
+    html += `<div class="code-block">
+      <div class="code-block-head">
+        <span class="code-lang">${escapeHtml(lang || 'kode')}</span>
+        <button type="button" class="copy-code-btn">Salin</button>
+      </div>
+      <pre><code>${escapeHtml(code.replace(/\n$/, ''))}</code></pre>
+    </div>`;
+    lastIndex = match.index + full.length;
+  }
+  html += renderInline(text.slice(lastIndex));
+  return html;
+}
+
+function renderInline(segment) {
+  return escapeHtml(segment)
+    .replace(/\*\*([^\n]+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/__([^\n]+?)__/g, '<strong>$1</strong>')
+    .replace(/\*([^\n*]+?)\*/g, '<em>$1</em>')
+    .replace(/(?<![A-Za-z0-9_])_([^\n_]+?)_(?![A-Za-z0-9_])/g, '<em>$1</em>')
+    .replace(/`([^`\n]+)`/g, '<code class="inline-code">$1</code>')
+    .replace(/\n/g, '<br>');
+}
+
+// Copy-to-clipboard for code blocks (event delegation — survives re-renders).
+document.getElementById('messages').addEventListener('click', (e) => {
+  const btn = e.target.closest('.copy-code-btn');
+  if (!btn) return;
+  const code = btn.closest('.code-block').querySelector('code').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const original = btn.textContent;
+    btn.textContent = 'Tersalin!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1500);
+  });
+});
 
 function renderCharInfo(elId, c) {
   document.getElementById(elId).innerHTML = c
