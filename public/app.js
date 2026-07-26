@@ -46,6 +46,18 @@ function showScreen(name) {
   });
 }
 
+// ── Per-character accent color ───────────────────────────────────────────────
+// Every mentor gets a stable color derived from their name (same idea as
+// seed.js's avatar generator) so their identity carries through cards,
+// nameplates, chat bubbles and list rows without needing to store a color.
+function charHue(name) {
+  const s = name || '?';
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+  return hash % 360;
+}
+function charAccent(name) { return `hsl(${charHue(name)} 62% 58%)`; }
+
 // ── Characters (screen 1) ────────────────────────────────────────────────────
 async function loadCharacters() {
   characters = await (await api('/api/characters')).json();
@@ -65,6 +77,7 @@ async function loadCharacters() {
   characters.forEach(c => {
     const div = document.createElement('div');
     div.className = 'char-card';
+    div.style.setProperty('--char-accent', charAccent(c.name));
     div.innerHTML = `
       <button class="char-card-delete" title="Hapus karakter">🗑</button>
       ${avatarHtml(c, 'char-card-avatar')}
@@ -91,6 +104,7 @@ async function deleteCharacter(c) {
 async function selectCharacter(c) {
   currentCharacter = c;
   currentChat = null;
+  document.getElementById('screen-chats').style.setProperty('--char-accent', charAccent(c.name));
   renderCharInfo('chats-char-info', c);
   showScreen('chats');
   await loadChats();
@@ -155,6 +169,7 @@ document.getElementById('back-to-chats-btn').onclick = () => {
 
 async function openChat(chat) {
   currentChat = chat;
+  document.getElementById('screen-chat').style.setProperty('--char-accent', charAccent(currentCharacter.name));
   renderCharInfo('chat-char-info', currentCharacter);
   showScreen('chat');
   const msgs = await (await api(`/api/chats/${chat.id}/messages`)).json();
@@ -212,15 +227,15 @@ async function sendMessage() {
         const data = JSON.parse(dataMatch[1]);
         if (event === 'token') {
           acc += data.t;
-          bubble.querySelector('.content').innerHTML = renderMarkdown(acc);
+          renderMarkdownInto(bubble.querySelector('.content'), acc);
           scrollDown();
         } else if (event === 'error') {
-          bubble.querySelector('.content').innerHTML = renderMarkdown(acc || `⚠️ ${data.error}`);
+          renderMarkdownInto(bubble.querySelector('.content'), acc || `⚠️ ${data.error}`);
         }
       }
     }
   } catch (err) {
-    bubble.querySelector('.content').innerHTML = renderMarkdown(`⚠️ ${err.message}`);
+    renderMarkdownInto(bubble.querySelector('.content'), `⚠️ ${err.message}`);
   } finally {
     bubble.querySelector('.msg').classList.remove('typing');
     setComposerEnabled(true);
@@ -244,42 +259,39 @@ function addBubble(role, content, timestamp) {
       <div class="msg-meta"><span class="who">${escapeHtml(name)}</span>${time}</div>
       <div class="msg ${role}"><div class="content"></div></div>
     </div>`;
-  row.querySelector('.content').innerHTML = renderMarkdown(content);
+  renderMarkdownInto(row.querySelector('.content'), content);
   box.appendChild(row);
   scrollDown();
   return row;
 }
 
-// ── Lightweight markdown rendering (bold/italic/inline code/code blocks) ────
-// Not a full CommonMark parser — just enough for typical AI chat replies.
-function renderMarkdown(raw) {
-  const text = raw || '';
-  const codeBlockRegex = /```(\w*)\n?([\s\S]*?)(?:```|$)/g;
-  let lastIndex = 0, html = '', match;
-  while ((match = codeBlockRegex.exec(text))) {
-    const [full, lang, code] = match;
-    html += renderInline(text.slice(lastIndex, match.index));
-    html += `<div class="code-block">
-      <div class="code-block-head">
-        <span class="code-lang">${escapeHtml(lang || 'kode')}</span>
-        <button type="button" class="copy-code-btn">Salin</button>
-      </div>
-      <pre><code>${escapeHtml(code.replace(/\n$/, ''))}</code></pre>
-    </div>`;
-    lastIndex = match.index + full.length;
-  }
-  html += renderInline(text.slice(lastIndex));
-  return html;
+// ── Markdown rendering (marked + DOMPurify) ─────────────────────────────────
+// Handles nested code fences, lists, tables etc. properly — a hand-rolled
+// regex parser kept mangling edge cases (nested ``` blocks, stray asterisks).
+marked.setOptions({ breaks: true, gfm: true });
+
+function renderMarkdownInto(el, raw) {
+  const html = marked.parse(raw || '');
+  el.innerHTML = DOMPurify.sanitize(html);
+  enhanceCodeBlocks(el);
 }
 
-function renderInline(segment) {
-  return escapeHtml(segment)
-    .replace(/\*\*([^\n]+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/__([^\n]+?)__/g, '<strong>$1</strong>')
-    .replace(/\*([^\n*]+?)\*/g, '<em>$1</em>')
-    .replace(/(?<![A-Za-z0-9_])_([^\n_]+?)_(?![A-Za-z0-9_])/g, '<em>$1</em>')
-    .replace(/`([^`\n]+)`/g, '<code class="inline-code">$1</code>')
-    .replace(/\n/g, '<br>');
+// Wrap each <pre><code> marked produces with a header (language + copy button)
+// matching the app's existing code-block styling.
+function enhanceCodeBlocks(container) {
+  container.querySelectorAll('pre').forEach(pre => {
+    if (pre.parentElement.classList.contains('code-block')) return;
+    const codeEl = pre.querySelector('code');
+    const langMatch = codeEl && codeEl.className.match(/language-(\S+)/);
+    const wrap = document.createElement('div');
+    wrap.className = 'code-block';
+    const head = document.createElement('div');
+    head.className = 'code-block-head';
+    head.innerHTML = `<span class="code-lang">${escapeHtml(langMatch ? langMatch[1] : 'kode')}</span><button type="button" class="copy-code-btn">Salin</button>`;
+    pre.replaceWith(wrap);
+    wrap.appendChild(head);
+    wrap.appendChild(pre);
+  });
 }
 
 // Copy-to-clipboard for code blocks (event delegation — survives re-renders).
@@ -296,9 +308,14 @@ document.getElementById('messages').addEventListener('click', (e) => {
 });
 
 function renderCharInfo(elId, c) {
-  document.getElementById(elId).innerHTML = c
-    ? `${avatarHtml(c)}<span class="char-info-name">${escapeHtml(c.name)}</span>`
-    : '';
+  if (!c) { document.getElementById(elId).innerHTML = ''; return; }
+  const sub = (c.persona || '').split(/[.!?\n]/)[0].trim().slice(0, 42);
+  document.getElementById(elId).innerHTML = `
+    ${avatarHtml(c, 'avatar avatar-ring')}
+    <span class="char-info-text">
+      <span class="char-info-name">${escapeHtml(c.name)}</span>
+      ${sub ? `<span class="char-info-sub">${escapeHtml(sub)}</span>` : ''}
+    </span>`;
 }
 
 // Renders a round avatar image, or a colored circle with the first letter if none.

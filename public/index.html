@@ -21,8 +21,11 @@
   <div id="app" class="app hidden">
     <!-- Layar 1: pilih karakter -->
     <section id="screen-characters" class="screen">
-      <header class="screen-header">
-        <h1>Karakter</h1>
+      <header class="screen-header masthead">
+        <div class="masthead-text">
+          <h1>AIChat <span class="masthead-accent">With Colab</span></h1>
+          <p class="masthead-sub">Pilih mentor untuk mulai ngobrol</p>
+        </div>
         <div class="header-actions">
           <button id="test-btn" class="ghost small-btn" title="Tes koneksi LLM">Tes koneksi</button>
           <button id="new-char-btn" class="primary-btn" title="Karakter baru">+ Baru</button>
@@ -56,7 +59,7 @@
       <div id="messages" class="messages"></div>
       <div class="composer">
         <div class="composer-inner">
-          <textarea id="input" placeholder="Ketik pesan… (Enter untuk kirim, Shift+Enter untuk baris baru)"></textarea>
+          <textarea id="input" placeholder=""></textarea>
           <button id="send-btn" title="Kirim"></button>
         </div>
       </div>
@@ -107,6 +110,8 @@
     </div>
   </div>
 
+  <script src="/vendor/marked/marked.umd.js"></script>
+  <script src="/vendor/dompurify/purify.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

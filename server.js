@@ -166,6 +166,11 @@ app.get('/api/test-connection', async (req, res) => {
   }
 });
 
+// Serve the browser builds of markdown/sanitizer libs straight from node_modules
+// — no bundler needed, just plain <script> tags pointed at these paths.
+app.use('/vendor/marked', express.static(path.join(__dirname, 'node_modules/marked/lib')));
+app.use('/vendor/dompurify', express.static(path.join(__dirname, 'node_modules/dompurify/dist')));
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
