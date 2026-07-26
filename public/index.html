@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,102 +7,102 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- Token login (only shown if the server requires it) -->
+  <!-- Login token (hanya muncul jika server mewajibkannya) -->
   <div id="login" class="overlay hidden">
     <div class="card">
-      <h2>Access token</h2>
-      <p class="muted">This app is protected. Enter the access token.</p>
+      <h2>Token akses</h2>
+      <p class="muted">Aplikasi ini dilindungi. Masukkan token akses.</p>
       <input id="token-input" type="password" placeholder="Token" />
-      <button id="token-btn">Enter</button>
-      <p id="token-error" class="error hidden">Wrong token.</p>
+      <button id="token-btn">Masuk</button>
+      <p id="token-error" class="error hidden">Token salah.</p>
     </div>
   </div>
 
   <div id="app" class="app hidden">
-    <!-- Screen 1: pick a character -->
+    <!-- Layar 1: pilih karakter -->
     <section id="screen-characters" class="screen">
       <header class="screen-header">
-        <h1>Characters</h1>
+        <h1>Karakter</h1>
         <div class="header-actions">
-          <button id="test-btn" class="ghost small-btn" title="Test LLM connection">Test connection</button>
-          <button id="new-char-btn" class="primary-btn" title="New character">+ New</button>
+          <button id="test-btn" class="ghost small-btn" title="Tes koneksi LLM">Tes koneksi</button>
+          <button id="new-char-btn" class="primary-btn" title="Karakter baru">+ Baru</button>
         </div>
       </header>
       <div id="test-status" class="muted small test-status"></div>
       <div id="char-grid" class="char-grid"></div>
     </section>
 
-    <!-- Screen 2: chats belonging to the selected character -->
+    <!-- Layar 2: daftar chat milik karakter yang dipilih -->
     <section id="screen-chats" class="screen hidden">
       <header class="screen-header">
-        <button id="back-to-chars-btn" class="icon-btn" title="Switch character">←</button>
+        <button id="back-to-chars-btn" class="icon-btn" title="Ganti karakter">←</button>
         <div id="chats-char-info" class="char-info"></div>
-        <button id="new-chat-btn" class="primary-btn">+ New chat</button>
+        <button id="new-chat-btn" class="primary-btn">+ Chat baru</button>
       </header>
       <div id="chat-list" class="chat-list"></div>
     </section>
 
-    <!-- Screen 3: the conversation -->
+    <!-- Layar 3: percakapan -->
     <section id="screen-chat" class="screen hidden">
       <header id="chat-header" class="screen-header">
-        <button id="back-to-chats-btn" class="icon-btn" title="Back to chats">←</button>
+        <button id="back-to-chats-btn" class="icon-btn" title="Kembali ke daftar chat">←</button>
         <div id="chat-char-info" class="char-info"></div>
         <div class="header-actions">
-          <button id="summarize-btn" class="ghost icon-only" title="Summarize this chat into memory">🧾</button>
-          <button id="memory-btn" class="ghost icon-only" title="View memory">🧠</button>
-          <button id="delete-chat-btn" class="ghost icon-only danger" title="Delete this chat">🗑</button>
+          <button id="summarize-btn" class="ghost icon-only" title="Ringkas chat ini ke memori">🧾</button>
+          <button id="memory-btn" class="ghost icon-only" title="Lihat memori">🧠</button>
+          <button id="delete-chat-btn" class="ghost icon-only danger" title="Hapus chat ini">🗑</button>
         </div>
       </header>
       <div id="messages" class="messages"></div>
       <div class="composer">
         <div class="composer-inner">
-          <textarea id="input" placeholder="Type a message… (Enter to send, Shift+Enter for newline)"></textarea>
-          <button id="send-btn" title="Send"></button>
+          <textarea id="input" placeholder="Ketik pesan… (Enter untuk kirim, Shift+Enter untuk baris baru)"></textarea>
+          <button id="send-btn" title="Kirim"></button>
         </div>
       </div>
     </section>
   </div>
 
-  <!-- Character editor modal -->
+  <!-- Modal editor karakter -->
   <div id="char-modal" class="overlay hidden">
     <div class="card wide">
-      <h2 id="char-modal-title">New character</h2>
+      <h2 id="char-modal-title">Karakter baru</h2>
       <div class="avatar-row">
         <img id="f-avatar-preview" class="avatar-preview" alt="" />
-        <label class="avatar-label">Avatar (optional)
+        <label class="avatar-label">Avatar (opsional)
           <input id="f-avatar" type="file" accept="image/*" />
         </label>
       </div>
-      <label>Name<input id="f-name" /></label>
+      <label>Nama<input id="f-name" /></label>
       <div class="row">
-        <label>Gender<input id="f-gender" /></label>
-        <label>Age<input id="f-age" /></label>
+        <label>Jenis kelamin<input id="f-gender" /></label>
+        <label>Usia<input id="f-age" /></label>
       </div>
-      <label>Personality / description<textarea id="f-persona" rows="3"></textarea></label>
-      <label>Scenario<textarea id="f-scenario" rows="2"></textarea></label>
-      <label>First message<textarea id="f-first" rows="2"></textarea></label>
-      <label>Extra system instructions<textarea id="f-sys" rows="2"></textarea></label>
+      <label>Kepribadian / deskripsi<textarea id="f-persona" rows="3"></textarea></label>
+      <label>Skenario<textarea id="f-scenario" rows="2"></textarea></label>
+      <label>Pesan pertama<textarea id="f-first" rows="2"></textarea></label>
+      <label>Instruksi sistem tambahan<textarea id="f-sys" rows="2"></textarea></label>
       <div class="row end">
-        <button id="char-cancel" class="ghost">Cancel</button>
-        <button id="char-save">Save</button>
+        <button id="char-cancel" class="ghost">Batal</button>
+        <button id="char-save">Simpan</button>
       </div>
     </div>
   </div>
 
   <div id="memory-modal" class="overlay hidden">
     <div class="card wide">
-      <h2 id="memory-title">Memory</h2>
-      <p class="muted small">What this character remembers across all chats.</p>
-      <h3>Facts</h3>
+      <h2 id="memory-title">Memori</h2>
+      <p class="muted small">Hal-hal yang diingat karakter ini di semua chat.</p>
+      <h3>Fakta</h3>
       <div id="memory-facts" class="mem-list"></div>
       <div class="row">
-        <input id="new-fact" placeholder="Add a fact to remember…" />
-        <button id="add-fact-btn">Add</button>
+        <input id="new-fact" placeholder="Tambah fakta untuk diingat…" />
+        <button id="add-fact-btn">Tambah</button>
       </div>
-      <h3>Summaries</h3>
+      <h3>Ringkasan</h3>
       <div id="memory-summaries" class="mem-list muted small"></div>
       <div class="row end">
-        <button id="memory-close" class="ghost">Close</button>
+        <button id="memory-close" class="ghost">Tutup</button>
       </div>
     </div>
   </div>

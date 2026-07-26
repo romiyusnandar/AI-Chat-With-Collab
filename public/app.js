@@ -66,10 +66,10 @@ async function loadCharacters() {
     const div = document.createElement('div');
     div.className = 'char-card';
     div.innerHTML = `
-      <button class="char-card-delete" title="Delete character">🗑</button>
+      <button class="char-card-delete" title="Hapus karakter">🗑</button>
       ${avatarHtml(c, 'char-card-avatar')}
       <div class="char-card-name">${escapeHtml(c.name)}</div>
-      <div class="char-card-sub">${escapeHtml(c.persona || 'No description').slice(0, 70)}</div>
+      <div class="char-card-sub">${escapeHtml(c.persona || 'Tanpa deskripsi').slice(0, 70)}</div>
     `;
     div.querySelector('.char-card-delete').onclick = (e) => { e.stopPropagation(); deleteCharacter(c); };
     div.onclick = () => selectCharacter(c);
@@ -78,7 +78,7 @@ async function loadCharacters() {
 }
 
 async function deleteCharacter(c) {
-  if (!confirm(`Delete character “${c.name}”? All of their chats and memory will be lost too.`)) return;
+  if (!confirm(`Hapus karakter “${c.name}”? Semua chat dan memorinya juga akan ikut hilang.`)) return;
   await api(`/api/characters/${c.id}`, { method: 'DELETE' });
   if (currentCharacter?.id === c.id) {
     currentCharacter = null;
@@ -109,7 +109,7 @@ async function loadChats() {
   const el = document.getElementById('chat-list');
   el.innerHTML = '';
   if (!chats.length) {
-    el.innerHTML = '<div class="empty-state">No chats yet. Click “+ New chat” to start one.</div>';
+    el.innerHTML = '<div class="empty-state">Belum ada chat. Klik “+ Chat baru” untuk mulai.</div>';
     return;
   }
   chats.forEach(ch => {
@@ -117,10 +117,10 @@ async function loadChats() {
     div.className = 'item chat-row';
     div.innerHTML = `
       <div class="item-text">
-        <div>${escapeHtml(ch.title || 'New chat')}</div>
-        <div class="sub">${ch.message_count} messages · ${formatDate(ch.updated_at)}</div>
+        <div>${escapeHtml(ch.title || 'Obrolan baru')}</div>
+        <div class="sub">${ch.message_count} pesan · ${formatDate(ch.updated_at)}</div>
       </div>
-      <button class="icon-only ghost danger chat-delete-btn" title="Delete this chat">🗑</button>
+      <button class="icon-only ghost danger chat-delete-btn" title="Hapus chat ini">🗑</button>
     `;
     div.querySelector('.item-text').onclick = () => openChat(ch);
     div.querySelector('.chat-delete-btn').onclick = (e) => { e.stopPropagation(); deleteChat(ch); };
@@ -137,7 +137,7 @@ document.getElementById('new-chat-btn').onclick = async () => {
 };
 
 async function deleteChat(chat) {
-  if (!confirm(`Delete “${chat.title || 'this chat'}”? This can’t be undone.`)) return;
+  if (!confirm(`Hapus “${chat.title || 'chat ini'}”? Tindakan ini tidak bisa dibatalkan.`)) return;
   await api(`/api/chats/${chat.id}`, { method: 'DELETE' });
   if (currentChat?.id === chat.id) {
     currentChat = null;
@@ -234,9 +234,9 @@ function addBubble(role, content, timestamp) {
   const row = document.createElement('div');
   row.className = `msg-row ${role}`;
   const av = role === 'user'
-    ? '<span class="avatar-fallback msg-avatar user-avatar">U</span>'
+    ? '<span class="avatar-fallback msg-avatar user-avatar">K</span>'
     : avatarHtml(currentCharacter, 'avatar msg-avatar');
-  const name = role === 'user' ? 'You' : (currentCharacter?.name || 'AI');
+  const name = role === 'user' ? 'Kamu' : (currentCharacter?.name || 'AI');
   const time = timestamp ? `<span class="msg-time">${formatTime(timestamp)}</span>` : '';
   row.innerHTML = `
     ${av}
@@ -307,7 +307,7 @@ document.getElementById('char-save').onclick = async () => {
     first_message: val('f-first'), system_prompt: val('f-sys'),
     avatar: charAvatarData,
   };
-  if (!body.name) return alert('Name is required');
+  if (!body.name) return alert('Nama wajib diisi');
   await api('/api/characters', { method: 'POST', body: JSON.stringify(body) });
   document.getElementById('char-modal').classList.add('hidden');
   loadCharacters();
@@ -349,10 +349,10 @@ function val(id) { return document.getElementById(id).value.trim(); }
 // ── Test connection ───────────────────────────────────────────────────────────
 document.getElementById('test-btn').onclick = async () => {
   const s = document.getElementById('test-status');
-  s.textContent = 'testing…';
+  s.textContent = 'menguji…';
   try {
     const r = await (await api('/api/test-connection')).json();
-    s.textContent = r.ok ? '✓ connected' : `✗ ${r.error}`;
+    s.textContent = r.ok ? '✓ terhubung' : `✗ ${r.error}`;
   } catch (e) { s.textContent = '✗ ' + e.message; }
 };
 
@@ -362,7 +362,7 @@ let currentMemory = { facts: [], summaries: [] };
 async function openMemory() {
   if (!currentCharacter) return;
   currentMemory = await (await api(`/api/characters/${currentCharacter.id}/memory`)).json();
-  document.getElementById('memory-title').textContent = `${currentCharacter.name} — Memory`;
+  document.getElementById('memory-title').textContent = `${currentCharacter.name} — Memori`;
   renderMemory();
   document.getElementById('memory-modal').classList.remove('hidden');
 }
@@ -370,13 +370,13 @@ async function openMemory() {
 function renderMemory() {
   const facts = document.getElementById('memory-facts');
   facts.innerHTML = '';
-  if (!currentMemory.facts.length) facts.innerHTML = '<div class="muted small">No facts yet.</div>';
+  if (!currentMemory.facts.length) facts.innerHTML = '<div class="muted small">Belum ada fakta.</div>';
   currentMemory.facts.forEach((f, i) => {
     const row = document.createElement('div');
     row.className = 'mem-item';
     row.innerHTML = `<span>${escapeHtml(f)}</span>`;
     const del = document.createElement('button');
-    del.textContent = '×'; del.title = 'Forget this';
+    del.textContent = '×'; del.title = 'Lupakan ini';
     del.onclick = () => deleteFact(i);
     row.appendChild(del);
     facts.appendChild(row);
@@ -385,7 +385,7 @@ function renderMemory() {
   const sums = document.getElementById('memory-summaries');
   sums.innerHTML = currentMemory.summaries.length
     ? currentMemory.summaries.map(s => `<div class="mem-item"><span>${escapeHtml(s)}</span></div>`).join('')
-    : '<div class="muted small">No summaries yet. Use "Remember this chat".</div>';
+    : '<div class="muted small">Belum ada ringkasan. Gunakan tombol "Ringkas chat ini".</div>';
 }
 
 async function saveMemory() {
@@ -411,7 +411,7 @@ document.getElementById('memory-close').onclick = () =>
   document.getElementById('memory-modal').classList.add('hidden');
 
 document.getElementById('summarize-btn').onclick = async () => {
-  if (!currentChat) return alert('Open a chat first.');
+  if (!currentChat) return alert('Buka chat dulu.');
   const btn = document.getElementById('summarize-btn');
   const label = btn.textContent;
   btn.disabled = true; btn.textContent = '…';
@@ -419,11 +419,11 @@ document.getElementById('summarize-btn').onclick = async () => {
     const r = await (await api(`/api/chats/${currentChat.id}/summarize`, { method: 'POST' })).json();
     if (r.ok) {
       currentMemory = r.memory;
-      alert('Saved to memory:\n\n' + (r.summary || '(no summary)'));
+      alert('Tersimpan ke memori:\n\n' + (r.summary || '(tidak ada ringkasan)'));
     } else {
-      alert('Failed: ' + r.error);
+      alert('Gagal: ' + r.error);
     }
-  } catch (e) { alert('Failed: ' + e.message); }
+  } catch (e) { alert('Gagal: ' + e.message); }
   finally { btn.disabled = false; btn.textContent = label; }
 };
 

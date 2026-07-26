@@ -59,7 +59,7 @@ function modelParams() {
 function endpointAndAuth() {
   const base = (process.env.BASE_URL || '').replace(/\/$/, '');
   if (!base || base.includes('your-colab-url')) {
-    throw new Error('BASE_URL is not configured. Set it in .env to your Colab/LiteLLM URL.');
+    throw new Error('BASE_URL belum dikonfigurasi. Atur di .env sesuai URL Colab/LiteLLM kamu.');
   }
   return {
     url: `${base}/v1/chat/completions`,

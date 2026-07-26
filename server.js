@@ -19,7 +19,7 @@ function auth(req, res, next) {
   const header = req.get('Authorization') || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : req.query.token;
   if (token === APP_TOKEN) return next();
-  res.status(401).json({ error: 'Unauthorized. Provide the access token.' });
+  res.status(401).json({ error: 'Tidak diizinkan. Masukkan token akses.' });
 }
 app.get('/api/auth-required', (req, res) => res.json({ required: !!APP_TOKEN }));
 app.use('/api', auth);
@@ -27,11 +27,11 @@ app.use('/api', auth);
 app.get('/api/characters', (req, res) => res.json(Characters.all()));
 app.get('/api/characters/:id', (req, res) => {
   const c = Characters.get(req.params.id);
-  c ? res.json(c) : res.status(404).json({ error: 'Not found' });
+  c ? res.json(c) : res.status(404).json({ error: 'Tidak ditemukan' });
 });
 app.post('/api/characters', (req, res) => {
   const b = req.body || {};
-  if (!b.name) return res.status(400).json({ error: 'name is required' });
+  if (!b.name) return res.status(400).json({ error: 'nama wajib diisi' });
   const char = Characters.create({
     id: uuid(),
     name: b.name, gender: b.gender || '', age: b.age || '', avatar: b.avatar || '',
@@ -41,7 +41,7 @@ app.post('/api/characters', (req, res) => {
   res.status(201).json(char);
 });
 app.put('/api/characters/:id', (req, res) => {
-  if (!Characters.get(req.params.id)) return res.status(404).json({ error: 'Not found' });
+  if (!Characters.get(req.params.id)) return res.status(404).json({ error: 'Tidak ditemukan' });
   res.json(Characters.update(req.params.id, req.body || {}));
 });
 app.delete('/api/characters/:id', (req, res) => {
@@ -53,8 +53,8 @@ app.get('/api/characters/:id/chats', (req, res) => res.json(Chats.listByCharacte
 app.post('/api/chats', (req, res) => {
   const { characterId } = req.body || {};
   const char = Characters.get(characterId);
-  if (!char) return res.status(404).json({ error: 'Character not found' });
-  const chat = Chats.create({ id: uuid(), character_id: characterId, title: 'New chat' });
+  if (!char) return res.status(404).json({ error: 'Karakter tidak ditemukan' });
+  const chat = Chats.create({ id: uuid(), character_id: characterId, title: 'Obrolan baru' });
   if (char.first_message) Messages.add(chat.id, 'assistant', char.first_message);
   res.status(201).json(chat);
 });
@@ -69,12 +69,12 @@ app.delete('/api/chats/:chatId', (req, res) => {
 
 app.post('/api/chats/:chatId/send', async (req, res) => {
   const chat = Chats.get(req.params.chatId);
-  if (!chat) return res.status(404).json({ error: 'Chat not found' });
+  if (!chat) return res.status(404).json({ error: 'Chat tidak ditemukan' });
   const char = Characters.get(chat.character_id);
-  if (!char) return res.status(404).json({ error: 'Character not found' });
+  if (!char) return res.status(404).json({ error: 'Karakter tidak ditemukan' });
 
   const userMessage = (req.body?.message || '').trim();
-  if (!userMessage) return res.status(400).json({ error: 'message is required' });
+  if (!userMessage) return res.status(400).json({ error: 'pesan wajib diisi' });
 
   Messages.add(chat.id, 'user', userMessage);
   const history = Messages.listByChat(chat.id).map(m => ({ role: m.role, content: m.content }));
@@ -97,15 +97,15 @@ app.post('/api/chats/:chatId/send', async (req, res) => {
       full += chunk;
       send('token', { t: chunk });
     }
-    const messageId = Messages.add(chat.id, 'assistant', full || '(no response)');
+    const messageId = Messages.add(chat.id, 'assistant', full || '(tidak ada balasan)');
     send('done', { messageId, content: full });
 
     const total = Messages.listByChat(chat.id).length;
     if (total > 0 && total % AUTO_SUMMARIZE_EVERY === 0) {
-      summarizeIntoMemory(char, chat.id).catch(e => console.error('auto-summarize:', e.message));
+      summarizeIntoMemory(char, chat.id).catch(e => console.error('auto-ringkas:', e.message));
     }
   } catch (err) {
-    console.error('stream error:', err.message);
+    console.error('kesalahan stream:', err.message);
     if (full) Messages.add(chat.id, 'assistant', full);
     send('error', { error: err.message });
   } finally {
@@ -141,9 +141,9 @@ app.put('/api/characters/:id/memory', (req, res) => {
 });
 app.post('/api/chats/:chatId/summarize', async (req, res) => {
   const chat = Chats.get(req.params.chatId);
-  if (!chat) return res.status(404).json({ error: 'Chat not found' });
+  if (!chat) return res.status(404).json({ error: 'Chat tidak ditemukan' });
   const char = Characters.get(chat.character_id);
-  if (!char) return res.status(404).json({ error: 'Character not found' });
+  if (!char) return res.status(404).json({ error: 'Karakter tidak ditemukan' });
   try {
     const result = await summarizeIntoMemory(char, chat.id);
     res.json({ ok: true, ...result, memory: Memory.get(char.id) });
@@ -181,10 +181,10 @@ function lanIps() {
 }
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n  AIChat Pro running:`);
-  console.log(`   Local:   http://localhost:${PORT}`);
+  console.log(`\n  AIChat Pro berjalan:`);
+  console.log(`   Lokal:   http://localhost:${PORT}`);
   const ips = lanIps();
-  if (ips.length) ips.forEach(ip => console.log(`   Network: http://${ip}:${PORT}`));
-  else console.log(`   Network: (no LAN IP found)`);
-  console.log(`   Auth:    ${APP_TOKEN ? 'ON (token required)' : 'OFF (open — set APP_TOKEN in .env to enable)'}\n`);
+  if (ips.length) ips.forEach(ip => console.log(`   Jaringan: http://${ip}:${PORT}`));
+  else console.log(`   Jaringan: (IP LAN tidak ditemukan)`);
+  console.log(`   Auth:    ${APP_TOKEN ? 'AKTIF (token diperlukan)' : 'NONAKTIF (terbuka — atur APP_TOKEN di .env untuk mengaktifkan)'}\n`);
 });
