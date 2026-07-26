@@ -51,6 +51,7 @@ function modelParams() {
   return {
     temperature: Number(process.env.TEMPERATURE ?? 0.8),
     top_p: Number(process.env.TOP_P ?? 0.9),
+    top_k: Number(process.env.TOP_K ?? 40),
     max_tokens: Number(process.env.MAX_TOKENS ?? 800),
   };
 }
