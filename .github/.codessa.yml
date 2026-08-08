@@ -1,0 +1,21 @@
+version: "1"
+
+auto_review: true
+
+# Review output: en | id | zh
+language: "en"
+
+# Review writing style: friendly | strict | concise
+tone: "strict"
+
+analysis_focus:
+  security: true
+  performance: true
+  bugs: true
+  code_style: true
+
+  # Strictness of displayed comments and commit status failures:
+  #   critical_only -> display and fail status only for "critical" findings
+  #   balanced      -> display all severity levels; fail status only for "critical" (default)
+  #   strict        -> display all severity levels; fail status for "major" as well
+  severity_threshold: "balanced"
