@@ -75,6 +75,7 @@ app.post('/api/chats/:chatId/send', async (req, res) => {
 
   const userMessage = (req.body?.message || '').trim();
   if (!userMessage) return res.status(400).json({ error: 'pesan wajib diisi' });
+  const thinking = req.body?.thinking !== false; // default on unless explicitly disabled
 
   Messages.add(chat.id, 'user', userMessage);
   const history = Messages.listByChat(chat.id).map(m => ({ role: m.role, content: m.content }));
@@ -93,7 +94,7 @@ app.post('/api/chats/:chatId/send', async (req, res) => {
 
   let full = '';
   try {
-    for await (const chunk of streamChat(char, history, memory)) {
+    for await (const chunk of streamChat(char, history, memory, { thinking })) {
       full += chunk;
       send('token', { t: chunk });
     }

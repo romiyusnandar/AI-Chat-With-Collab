@@ -34,7 +34,7 @@ function buildSystemPrompt(char, memory = null) {
   return parts.join('\n');
 }
 
-function buildMessages(char, history, memory = null, tokenBudget = Number(process.env.CONTEXT_TOKENS ?? 6000)) {
+function buildMessages(char, history, memory = null, tokenBudget = Number(process.env.CONTEXT_TOKENS ?? 6000), thinking = true) {
   const system = buildSystemPrompt(char, memory);
   let budget = tokenBudget - estimateTokens(system);
   const kept = [];
@@ -44,7 +44,34 @@ function buildMessages(char, history, memory = null, tokenBudget = Number(proces
     budget -= t;
     kept.unshift({ role: history[i].role, content: history[i].content });
   }
+
+  // The model (Qwen3-family) supports a per-turn hybrid-thinking switch via a
+  // trailing /think or /no_think marker in the latest user turn — this works
+  // through the Ollama -> LiteLLM -> Cloudflare tunnel chain unmodified,
+  // unlike an extra API param that the proxy layers might drop.
+  for (let i = kept.length - 1; i >= 0; i--) {
+    if (kept[i].role === 'user') {
+      kept[i] = { ...kept[i], content: `${kept[i].content} ${thinking ? '/think' : '/no_think'}` };
+      break;
+    }
+  }
+
   return [{ role: 'system', content: system }, ...kept];
+}
+
+// Splits a raw model reply into its <think>...</think> reasoning (if any) and
+// the visible answer. Handles a still-open <think> block for live streaming.
+function splitThinking(raw) {
+  const text = raw || '';
+  const closed = text.match(/^([\s\S]*?)<think>([\s\S]*?)<\/think>([\s\S]*)$/);
+  if (closed) {
+    return { before: closed[1], thinking: closed[2].trim(), answer: closed[3].trim(), open: false };
+  }
+  const open = text.match(/^([\s\S]*?)<think>([\s\S]*)$/);
+  if (open) {
+    return { before: open[1], thinking: open[2], answer: '', open: true };
+  }
+  return { before: '', thinking: '', answer: text.trim(), open: false };
 }
 
 function modelParams() {
@@ -68,7 +95,7 @@ function endpointAndAuth() {
   };
 }
 
-async function* streamChat(char, history, memory = null) {
+async function* streamChat(char, history, memory = null, { thinking = true } = {}) {
   const { url, apiKey, model } = endpointAndAuth();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 120000);
@@ -81,7 +108,10 @@ async function* streamChat(char, history, memory = null) {
       body: JSON.stringify({
         model,
         stream: true,
-        messages: buildMessages(char, history, memory),
+        messages: buildMessages(char, history, memory, undefined, thinking),
+        // Some Ollama/vLLM builds also honor this directly for hybrid-thinking
+        // models; harmless if the proxy strips unknown fields.
+        think: thinking,
         ...modelParams(),
       }),
     });
@@ -146,11 +176,11 @@ async function summarizeConversation(char, history) {
         'Keep facts concise and only include things that would matter in future chats. ' +
         `Write the summary and facts text in this language: ${(process.env.REPLY_LANGUAGE || 'Indonesian').trim()}.`
     },
-    { role: 'user', content: `Conversation between the User and ${char.name}:\n\n${transcript}` },
+    { role: 'user', content: `Conversation between the User and ${char.name}:\n\n${transcript} /no_think` },
   ];
 
   const raw = await complete(prompt, { maxTokens: 500 });
-  const cleaned = raw.replace(/```json|```/g, '').trim();
+  const cleaned = raw.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/```json|```/g, '').trim();
   const match = cleaned.match(/\{[\s\S]*\}/);
   try {
     const parsed = JSON.parse(match ? match[0] : cleaned);
@@ -163,4 +193,4 @@ async function summarizeConversation(char, history) {
   }
 }
 
-module.exports = { streamChat, complete, summarizeConversation, buildSystemPrompt, buildMessages, estimateTokens };
+module.exports = { streamChat, complete, summarizeConversation, buildSystemPrompt, buildMessages, splitThinking, estimateTokens };
