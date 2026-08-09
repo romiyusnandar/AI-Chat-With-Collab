@@ -167,7 +167,7 @@ button.danger:hover { background: rgba(217,123,108,.12); border-color: var(--dan
 
 .msg {
   padding: 11px 15px; border-radius: 16px; line-height: 1.55; font-size: 14.5px;
-  white-space: pre-wrap; word-wrap: break-word; box-shadow: 0 1px 2px rgba(0,0,0,.2);
+  word-wrap: break-word; box-shadow: 0 1px 2px rgba(0,0,0,.2);
 }
 .msg.user { background: var(--user); color: #201404; border-bottom-right-radius: 4px; }
 .msg.assistant {
@@ -202,6 +202,22 @@ button.danger:hover { background: rgba(217,123,108,.12); border-color: var(--dan
   font-family: var(--font-mono); font-size: 13px;
 }
 .msg .content pre code { background: none; padding: 0; }
+
+/* Collapsible "thinking" block for hybrid-reasoning models */
+.think-box { margin-bottom: 8px; }
+.think-box.hidden { display: none; }
+.think-toggle {
+  display: inline-flex; align-items: center; gap: 6px; background: none; border: none;
+  color: var(--muted); font-size: 12px; font-style: italic; cursor: pointer; padding: 0;
+}
+.think-box.streaming .think-toggle { color: var(--char-accent, var(--accent)); }
+.think-body {
+  display: none; margin-top: 6px; padding: 8px 10px; border-radius: 10px;
+  background: rgba(0,0,0,.2); border-left: 2px solid var(--muted);
+  color: var(--muted); font-size: 12.5px; font-style: italic; white-space: pre-wrap;
+  max-height: 260px; overflow-y: auto;
+}
+.think-box.open .think-body, .think-box.streaming .think-body { display: block; }
 .code-block { margin: 8px 0; border-radius: 10px; background: #0b0d12; }
 .code-block-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; }
 .code-lang { font-size: 11px; color: var(--muted); text-transform: uppercase; }
@@ -235,6 +251,23 @@ button.danger:hover { background: rgba(217,123,108,.12); border-color: var(--dan
   display: flex; align-items: center; justify-content: center; font-size: 0;
 }
 .composer button#send-btn::after { content: '➤'; font-size: 15px; }
+
+#thinking-toggle-btn {
+  flex-shrink: 0; display: flex; align-items: center; gap: 5px;
+  height: 34px; padding: 0 12px; border-radius: 17px; border: 1px solid var(--line);
+  background: transparent; color: var(--muted); font-size: 12.5px; font-weight: 600;
+  cursor: pointer; transition: background .15s, color .15s, border-color .15s;
+}
+#thinking-toggle-btn:hover { border-color: var(--char-accent, var(--accent)); }
+#thinking-toggle-btn .think-toggle-icon { font-size: 15px; filter: grayscale(1); opacity: .6; }
+#thinking-toggle-btn.on {
+  background: var(--char-accent, var(--accent)); border-color: transparent; color: #201404;
+}
+#thinking-toggle-btn.on .think-toggle-icon { filter: none; opacity: 1; }
+@media (max-width: 480px) {
+  #thinking-toggle-btn .think-toggle-label { display: none; }
+  #thinking-toggle-btn { padding: 0 9px; }
+}
 
 /* Overlays / modals */
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.65); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }

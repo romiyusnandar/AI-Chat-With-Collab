@@ -3,6 +3,7 @@ let TOKEN = localStorage.getItem('token') || '';
 let currentCharacter = null;
 let currentChat = null;
 let characters = [];
+let thinkingEnabled = localStorage.getItem('thinkingEnabled') !== 'off'; // default: on
 
 // ── API helper (attaches auth token) ─────────────────────────────────────────
 async function api(path, opts = {}) {
@@ -177,9 +178,24 @@ async function openChat(chat) {
   box.innerHTML = '';
   msgs.forEach(m => addBubble(m.role, m.content, m.created_at));
   setComposerEnabled(true);
+  updateThinkingToggleUI();
   scrollDown();
   document.getElementById('input').focus();
 }
+
+// ── Thinking mode toggle ──────────────────────────────────────────────────────
+function updateThinkingToggleUI() {
+  const btn = document.getElementById('thinking-toggle-btn');
+  if (!btn) return;
+  btn.classList.toggle('on', thinkingEnabled);
+  btn.title = thinkingEnabled ? 'Mode berpikir: AKTIF (klik untuk matikan)' : 'Mode berpikir: NONAKTIF (klik untuk aktifkan)';
+}
+document.getElementById('thinking-toggle-btn').onclick = () => {
+  thinkingEnabled = !thinkingEnabled;
+  localStorage.setItem('thinkingEnabled', thinkingEnabled ? 'on' : 'off');
+  updateThinkingToggleUI();
+};
+updateThinkingToggleUI();
 
 document.getElementById('delete-chat-btn').onclick = () => {
   if (!currentChat) return;
@@ -205,7 +221,7 @@ async function sendMessage() {
 
   try {
     const res = await api(`/api/chats/${currentChat.id}/send`, {
-      method: 'POST', body: JSON.stringify({ message: text }),
+      method: 'POST', body: JSON.stringify({ message: text, thinking: thinkingEnabled }),
     });
 
     // Read the SSE stream chunk by chunk.
@@ -227,15 +243,15 @@ async function sendMessage() {
         const data = JSON.parse(dataMatch[1]);
         if (event === 'token') {
           acc += data.t;
-          renderMarkdownInto(bubble.querySelector('.content'), acc);
+          renderAssistantContent(bubble, acc);
           scrollDown();
         } else if (event === 'error') {
-          renderMarkdownInto(bubble.querySelector('.content'), acc || `⚠️ ${data.error}`);
+          renderAssistantContent(bubble, acc || `⚠️ ${data.error}`);
         }
       }
     }
   } catch (err) {
-    renderMarkdownInto(bubble.querySelector('.content'), `⚠️ ${err.message}`);
+    renderAssistantContent(bubble, `⚠️ ${err.message}`);
   } finally {
     bubble.querySelector('.msg').classList.remove('typing');
     setComposerEnabled(true);
@@ -257,12 +273,41 @@ function addBubble(role, content, timestamp) {
     ${av}
     <div class="msg-bubble-wrap">
       <div class="msg-meta"><span class="who">${escapeHtml(name)}</span>${time}</div>
-      <div class="msg ${role}"><div class="content"></div></div>
+      <div class="msg ${role}">
+        ${role === 'assistant' ? '<div class="think-box hidden"><button type="button" class="think-toggle">💭 Proses berpikir</button><div class="think-body"></div></div>' : ''}
+        <div class="content"></div>
+      </div>
     </div>`;
-  renderMarkdownInto(row.querySelector('.content'), content);
+  if (role === 'assistant') renderAssistantContent(row, content);
+  else renderMarkdownInto(row.querySelector('.content'), content);
   box.appendChild(row);
   scrollDown();
   return row;
+}
+
+// Splits a raw assistant reply into an optional <think>...</think> block and
+// the visible answer (mirrors llm.js's splitThinking — kept in sync manually
+// since this runs in the browser, not through require()).
+function splitThinkingClient(raw) {
+  const text = raw || '';
+  const closed = text.match(/^([\s\S]*?)<think>([\s\S]*?)<\/think>([\s\S]*)$/);
+  if (closed) return { thinking: closed[2].trim(), answer: closed[3].trim(), open: false };
+  const open = text.match(/^([\s\S]*?)<think>([\s\S]*)$/);
+  if (open) return { thinking: open[2], answer: '', open: true };
+  return { thinking: '', answer: text.trim(), open: false };
+}
+
+// Renders an assistant bubble's raw text, routing any <think> content into
+// the collapsible "thinking" box and the rest into the normal markdown body.
+function renderAssistantContent(bubble, raw) {
+  const { thinking, answer, open } = splitThinkingClient(raw);
+  const box = bubble.querySelector('.think-box');
+  if (box) {
+    box.classList.toggle('hidden', !thinking);
+    box.classList.toggle('streaming', open);
+    if (thinking) box.querySelector('.think-body').textContent = thinking;
+  }
+  renderMarkdownInto(bubble.querySelector('.content'), answer);
 }
 
 // ── Markdown rendering (marked + DOMPurify) ─────────────────────────────────
@@ -293,6 +338,12 @@ function enhanceCodeBlocks(container) {
     wrap.appendChild(pre);
   });
 }
+
+// Expand/collapse the "thinking" box (event delegation — survives re-renders).
+document.getElementById('messages').addEventListener('click', (e) => {
+  const toggle = e.target.closest('.think-toggle');
+  if (toggle) toggle.closest('.think-box').classList.toggle('open');
+});
 
 // Copy-to-clipboard for code blocks (event delegation — survives re-renders).
 document.getElementById('messages').addEventListener('click', (e) => {
